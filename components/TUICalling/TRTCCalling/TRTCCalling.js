@@ -38,7 +38,7 @@ class TRTCCalling {
     if (!wx.$TSignaling) {
       wx.$TSignaling = new TSignaling({ SDKAppID: params.sdkAppID, tim: this.tim })
     }
-    this.TSignalingClient = new TSignalingClient({ TSignaling: wx.$TSignaling })
+    this.TSignalingClient = wx.TSignalingClient
     this.TRTCCallingDelegate = new TRTCCallingDelegate({ emitter: this._emitter })
     console.info(`${TAG_NAME} SDK Version:${TRTCCallingInfo.version}, SDKAppID:${params.sdkAppID}`)
   }
@@ -674,18 +674,22 @@ class TRTCCalling {
    */
   async login(data) {
     wx.$TSignaling.setLogLevel(0)
-    this.data.config.userID = data.userID
-    this.data.config.userSig = data.userSig
-    return wx.$TSignaling.login({
-      userID: data.userID,
-      userSig: data.userSig,
-    }).then((res) => {
-      console.log(TAG_NAME, 'login', 'IM login success', res)
-      this._reset()
-      this._addTSignalingEvent()
-      this._addTRTCEvent()
-      this.initTRTC()
-    })
+    this._reset()
+    this._addTSignalingEvent()
+    this._addTRTCEvent()
+    this.initTRTC()
+    // this.data.config.userID = data.userID
+    // this.data.config.userSig = data.userSig
+    // return wx.$TSignaling.login({
+    //   userID: data.userID,
+    //   userSig: data.userSig,
+    // }).then((res) => {
+    //   console.log(TAG_NAME, 'login', 'IM login success', res)
+    //   this._reset()
+    //   this._addTSignalingEvent()
+    //   this._addTRTCEvent()
+    //   this.initTRTC()
+    // })
   }
 
   /**

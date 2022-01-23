@@ -41,8 +41,8 @@ Component({
   methods: {
     // 新的邀请回调事件
     handleNewInvitationReceived(event) {
-      console.log(`${TAG_NAME}, handleNewInvitationReceived, event${JSON.stringify(event)}`)
-      this.data.config.type = event.data.inviteData.callType
+      console.log(`${TAG_NAME}, handleNewInvitationReceived`, event)
+      this.data.config.type = wx.$globalData.callType
       this.getUserProfile([event.data.sponsor])
       this.setData({
         config: this.data.config,
@@ -187,7 +187,7 @@ Component({
     // 增加 tsignaling 事件监听
     _addTSignalingEvent() {
       // 被邀请通话
-      wx.$TRTCCalling.on(wx.$TRTCCalling.EVENT.INVITED, this.handleNewInvitationReceived, this)
+      // wx.$TRTCCalling.on(wx.$TRTCCalling.EVENT.INVITED, this.handleNewInvitationReceived, this)
       // 用户接听
       wx.$TRTCCalling.on(wx.$TRTCCalling.EVENT.USER_ACCEPT, this.handleUserAccept, this)
       // 用户进入通话

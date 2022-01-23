@@ -41,10 +41,6 @@ Page({
         userSig: wx.$globalData.userSig
       }).then((res) => {
         console.log(TAG_NAME, 'userSig login success', res);
-        // this._reset();
-        // this._addTSignalingEvent();
-        // this._addTRTCEvent();
-        // this.initTRTC();
         wx.switchTab({
           url: '../index/index',
         })

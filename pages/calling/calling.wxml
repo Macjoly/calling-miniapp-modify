@@ -1,0 +1,7 @@
+<!--pages/calling/calling.wxml-->
+<view class="container">
+    <TUICalling
+    id="TUICalling-component"
+    config="{{config}}"
+  ></TUICalling>
+</view>
