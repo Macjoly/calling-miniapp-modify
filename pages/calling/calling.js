@@ -5,6 +5,7 @@ Page({
      * 页面的初始数据
      */
     data: {
+        callStatus: wx.$globalData.callStatus,
         config: {
             sdkAppID: wx.$globalData.sdkAppID,
             userID: wx.$globalData.userID,
@@ -27,8 +28,6 @@ Page({
             config: { ...this.data.config, ...config },
           }, () => {
             this.TUICalling = this.selectComponent('#TUICalling-component')
-            console.log(2222, this.data.config)
-            console.log(1111, this.TUICalling)
             this.TUICalling.init()
             this.TUICalling.handleNewInvitationReceived(wx.$globalData.callEvent)
           })   

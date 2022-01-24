@@ -30,7 +30,9 @@ App({
       _connectUserIDList: [],
       _isGroupCall: false,
       _groupID: '',
-      _unHandledInviteeList: []
+      _unHandledInviteeList: [],
+      inviteData: null,
+      inviteeList: []
     }
     wx.$TIM = TIM.create({SDKAppID: Signature.sdkAppID})
     wx.$TSignaling = new TSignaling({SDKAppID: Signature.sdkAppID, tim: wx.$TIM})
@@ -47,7 +49,9 @@ App({
     console.log(TAG_NAME, 'onNewInvitationReceived', event);
     const { data: { inviter, inviteeList, data, inviteID, groupID } } = event
     const inviteData = JSON.parse(data)
-    
+    wx.$globalData.inviteData = inviteData
+    wx.$globalData.inviteeList = inviteeList
+
     // 此处判断inviteeList.length 大于2，用于在非群组下多人通话判断
     // userIDs 为同步 native 在使用无 groupID 群聊时的判断依据
     const isGroupCall = groupID || inviteeList.length >= 2 || inviteData.data && inviteData.data.userIDs && inviteData.data.userIDs.length >= 2 ? true : false

@@ -24,7 +24,7 @@ Component({
         'text': '个人中心',
         'iconPath': '/pages/Resources/icon/personal.png',
         'selectedIconPath': '/pages/Resources/icon/personal-light.png',
-      },
+      }
     ],
   },
 

@@ -17,8 +17,8 @@ class TRTCCalling {
     this.data = {
       config: {
         sdkAppID: params.sdkAppID,
-        userID: '',
-        userSig: '',
+        userID: wx.$globalData.userID,
+        userSig: wx.$globalData.userSig,
         type: 1,
       },
     }
@@ -121,75 +121,31 @@ class TRTCCalling {
   // 新的邀请回调事件
   handleNewInvitationReceived(event) {
     console.log(TAG_NAME, 'onNewInvitationReceived', `callStatus：${this.data.callStatus === CALL_STATUS.CALLING || this.data.callStatus === CALL_STATUS.CONNECTED}, inviteID:${event.data.inviteID} inviter:${event.data.inviter} inviteeList:${event.data.inviteeList} data:${event.data.data}`)
-    const { data: { inviter, inviteeList, data, inviteID, groupID } } = event
-    const inviteData = JSON.parse(data)
-
-    // 此处判断inviteeList.length 大于2，用于在非群组下多人通话判断
-    // userIDs 为同步 native 在使用无 groupID 群聊时的判断依据
-    const isGroupCall = groupID || inviteeList.length >= 2 || inviteData.data && inviteData.data.userIDs && inviteData.data.userIDs.length >= 2 ? true : false
-    let callEnd = false
-    // 此处逻辑用于通话结束时发出的invite信令
-    // 群通话已结束时，room_id 不存在或者 call_end 为 0
-    if (isGroupCall && (!inviteData.room_id || (inviteData.call_end && inviteData.call_end === 0))) {
-      callEnd = true
-    }
-    // 1v1通话挂断时，通知对端的通话结束和通话时长
-    if (!isGroupCall && inviteData.call_end >= 0) {
-      callEnd = true
-    }
-    // 判断新的信令是否为结束信令
-    if (callEnd) {
-      // 群通话中收到最后挂断的邀请信令通知其他成员通话结束
-      this.TRTCCallingDelegate.onCallEnd({ userID: inviter, callEnd: isGroupCall ? 0 : inviteData.call_end })
-      this._reset()
-      return
-    }
-
-    // 收到音视频切换信令
-    if (!this.data._isGroupCall && this.judgeSwitchCallMode(inviteData)) {
-      this.handleSwitchCallModeTSignaling(inviteID, inviteData)
-      return
-    }
-
-    // 当前在通话中或在呼叫/被呼叫中，接收的新的邀请时，忙线拒绝
-    if (this.data.callStatus === CALL_STATUS.CALLING || this.data.callStatus === CALL_STATUS.CONNECTED) {
-      this.TSignalingClient.reject({ inviteID, type: data.call_type, lineBusy: 'line_busy' })
-      return
-    }
-
-    const callInfo = {
-      _isGroupCall: !!isGroupCall,
-      _groupID: groupID || '',
-      _unHandledInviteeList: [...inviteeList, inviter],
-    }
-    if (isGroupCall && !groupID) {
-      callInfo._unHandledInviteeList = [...inviteData.data.userIDs]
-    }
-
-    this.data.config.type = inviteData.call_type
-    this.data.invitation.inviteID = inviteID
-    this.data.invitation.inviter = inviter
-    this.data.invitation.type = inviteData.call_type
-    this.data.invitation.roomID = inviteData.room_id
-    this.data.isSponsor = false
-    this.data._connectUserIDList = [inviter]
-    this.data._isGroupCall = callInfo._isGroupCall
-    this.data._groupID = callInfo._groupID
-    this.data._unHandledInviteeList = callInfo._unHandledInviteeList
+  
+    this.data.config.type = wx.$globalData.callType
+    this.data.invitation.inviteID = wx.$globalData.inviteID
+    this.data.invitation.inviter = wx.$globalData.inviter
+    this.data.invitation.type = wx.$globalData.callType
+    this.data.invitation.roomID = wx.$globalData.roomID
+    this.data.isSponsor = wx.$globalData.isSponsor
+    this.data._connectUserIDList = wx.$globalData._connectUserIDList
+    this.data._isGroupCall = wx.$globalData._isGroupCall
+    this.data._groupID = wx.$globalData._groupID
+    this.data._unHandledInviteeList = wx.$globalData._unHandledInviteeList
     // 被邀请人进入calling状态
     // 当前invitation未处理完成时，下一个invitation都将会忙线
-    this._getUserProfile([inviter])
+    this._getUserProfile([wx.$globalData.inviter])
     this._setCallStatus(CALL_STATUS.CALLING)
     console.log(`${TAG_NAME} NEW_INVITATION_RECEIVED invitation: `, this.data.callStatus, this.data.invitation)
     const newReceiveData = {
-      sponsor: inviter,
-      inviteeList,
-      isFromGroup: isGroupCall,
-      inviteID,
+      sponsor: wx.$globalData.inviter,
+      inviteeList: wx.$globalData.inviteeList,
+      isFromGroup: wx.$globalData._isGroupCall,
+      inviteID: wx.$globalData.inviteID,
       inviteData: {
-        version: inviteData.version,
-        callType: inviteData.call_type,
-        roomID: inviteData.room_id,
+        version: wx.$globalData.inviteData.version,
+        callType: wx.$globalData.inviteData.call_type,
+        roomID: wx.$globalData.inviteData.room_id,
         callEnd: 0,
       },
     }
@@ -379,7 +335,7 @@ class TRTCCalling {
   // 增加 tsignaling 事件监听
   _addTSignalingEvent() {
     // 新的邀请回调事件
-    wx.$TSignaling.on(TSignaling.EVENT.NEW_INVITATION_RECEIVED, this.handleNewInvitationReceived, this)
+    // wx.$TSignaling.on(TSignaling.EVENT.NEW_INVITATION_RECEIVED, this.handleNewInvitationReceived, this)
     // 发出的邀请收到接受的回调
     wx.$TSignaling.on(TSignaling.EVENT.INVITEE_ACCEPTED, this.handleInviteeAccepted, this)
     // 发出的邀请收到拒绝的回调
@@ -830,8 +786,8 @@ class TRTCCalling {
     // 拼接pusherURL进房
     console.log(TAG_NAME, 'accept() inviteID: ', this.data.invitation.inviteID)
     const acceptRes = await this.TSignalingClient.accept({
-      inviteID: this.data.invitation.inviteID,
-      type: this.data.config.type,
+      inviteID: wx.$globalData.inviteID,
+      type: wx.$globalData.callType,
     })
     if (acceptRes.code === 0) {
       console.log(TAG_NAME, 'accept OK')
@@ -840,7 +796,7 @@ class TRTCCalling {
       if (this._getGroupCallFlag()) {
         this._setUnHandledInviteeList(this._getUserID())
       }
-      this.enterRoom({ roomID: this.data.invitation.roomID, callType: this.data.config.type })
+      this.enterRoom({ roomID: wx.$globalData.roomID, callType: wx.$globalData.callType })
       return {
         message: acceptRes.data.message,
         pusher: this.data.pusher,
