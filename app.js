@@ -23,7 +23,14 @@ App({
       callType: 1,
       callEvent: null,
       inviteId: '',
-      
+      inviteID: '',
+      inviter: '',
+      roomID: '',
+      isSponsor: false,
+      _connectUserIDList: [],
+      _isGroupCall: false,
+      _groupID: '',
+      _unHandledInviteeList: []
     }
     wx.$TIM = TIM.create({SDKAppID: Signature.sdkAppID})
     wx.$TSignaling = new TSignaling({SDKAppID: Signature.sdkAppID, tim: wx.$TIM})
@@ -63,7 +70,24 @@ App({
       wx.$TSignaling.reject({ inviteID, type: data.call_type, lineBusy: 'line_busy' })
       return
     }
+    const callInfo = {
+      _isGroupCall: !!isGroupCall,
+      _groupID: groupID || '',
+      _unHandledInviteeList: [...inviteeList, inviter],
+    }
+    if (isGroupCall && !groupID) {
+      callInfo._unHandledInviteeList = [...inviteData.data.userIDs]
+    }
+    
     wx.$globalData.callType = inviteData.call_type
+    wx.$globalData.inviteID = inviteID
+    wx.$globalData.inviter= inviter
+    wx.$globalData.roomID = inviteData.room_id
+    wx.$globalData.isSponsor = false
+    wx.$globalData._connectUserIDList = [inviter]
+    wx.$globalData._isGroupCall = callInfo._isGroupCall
+    wx.$globalData._groupID = callInfo._groupID
+    wx.$globalData._unHandledInviteeList = callInfo._unHandledInviteeList
     
     wx.$globalData.callEvent = event
     wx.navigateTo({
