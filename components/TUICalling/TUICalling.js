@@ -293,12 +293,13 @@ Component({
      */
     async accept() {
       wx.$TRTCCalling.accept().then((res) => {
+        console.log(777, res)
         this.setData({
           pusher: res.pusher,
           callStatus: 'connection',
         })
         this.triggerEvent('sendMessage', {
-          message: res.data.message,
+          message: res.message,
         })
       })
     },
