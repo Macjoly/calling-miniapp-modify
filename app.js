@@ -6,10 +6,11 @@ import { CALL_STATUS } from './components/TUICalling/TRTCCalling/common/constant
 
 const Signature = genTestUserSig('')
 const TAG_NAME = 'app';
+
 App({
   onLaunch: function() {
     wx.$globalData = {
-      userInfo: null,
+      userInfo: null, 
       headerHeight: 0,
       statusBarHeight: 0,
       sdkAppID: Signature.sdkAppID,
