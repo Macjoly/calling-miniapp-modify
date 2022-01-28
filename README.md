@@ -1,122 +1,177 @@
-本文主要介绍如何快速跑通微信小程序版本的 TRTCCalling Demo，Demo 中包括语音通话和视频通话场景：
 
- \- 语音通话：纯语音交互，支持多人互动语音聊天。
+### 说明
+本demo是基于[腾讯云calling小程序](https://github.com/tencentyun/TRTCSDK/tree/master/Web/TRTCScenesDemo/trtc-calling-web)修改了相关逻辑来实现全局监听，在收到邀请信令后跳转到指定页面（该页面注册了TUICalling组件）进行组件初始化，**使用前建议先了解官网demo的相关文档**，这里就不多做说明
 
- \- 视频通话：视频通话，面向在线客服等需要面对面交流的沟通场景。
+### 全局监听效果展示
+<img src="https://miller-1c285a-1253985742.tcloudbaseapp.com/2022git/0128.gif" style="widht: 45%;">
 
-## 效果展示
+<img src="https://wangyg-4gsdbg0a58f646da-1253985742.tcloudbaseapp.com/images/012802.gif" style="widht: 45%;">
 
-<img src="https://web.sdk.qcloud.com/component/trtccalling/doc/miniapp/audiocall.gif" style="width: 45%;" >
+### 基于calling组件的修改说明
+全局监听的实现思路就是在原有calling组件的基础上将信令放到了app.js文件，并在appLaunch实现邀请信令的监听，监听到邀请事件后处理邀请事件，并且把需要的参数设置为globalData方便取的时候获取，然后跳转页面初始化组件处理邀请事件，此外由于邀请没有走TRTCDelegate,所以挂断事件也是用信令单独处理的，由于时间比较催促，所以本demo仅提供思路和参考
 
-<img src="https://web.sdk.qcloud.com/component/trtccalling/doc/miniapp/videocall.gif" style="width:45%;" >
+#### 思维导图
+<img src="https://miller-1c285a-1253985742.tcloudbaseapp.com/2022git/120803.png" style="widht: 45%;">
 
-## 环境要求
-- 微信 App iOS 最低版本要求：7.0.9。
-- 微信 App Android 最低版本要求：7.0.8。
-- 小程序基础库最低版本要求：2.10.0。
-- 由于微信开发者工具不支持原生组件（即 &lt;live-pusher&gt; 和 &lt;live-player&gt; 标签），需要在真机上进行运行体验。
-- 由于小程序测试号不具备 &lt;live-pusher&gt; 和 &lt;live-player&gt; 的使用权限，需要申请常规小程序账号进行开发。
-- 不支持 uniapp 开发环境，请使用原生小程序开发环境。
+#### 修改点部分代码
+1. app.js 引入信令相关文件
+```
+import TSignaling from './components/TUICalling/TRTCCalling/node_module/tsignaling-wx'
+import TSignalingClient from './components/TUICalling/TRTCCalling/TSignalingClient'
+import TIM from './components/TUICalling/TRTCCalling/node_module/tim-wx-sdk'
+import { CALL_STATUS } from './components/TUICalling/TRTCCalling/common/constants'
+```
+2. 设置需要的全局参数
+```
+      userInfo: null,
+      headerHeight: 0,
+      statusBarHeight: 0,
+      sdkAppID: Signature.sdkAppID,
+      userID: '',
+      userSig: '',
+      token: '',
+      expiresIn: '',
+      phone: '',
+      sessionID: '',
+      callStatus: CALL_STATUS.IDLE, // 用户当前的通话状态
+      callType: 1,
+      callEvent: null,
+      inviteId: '',
+      inviteID: '',
+      inviter: '',
+      roomID: '',
+      isSponsor: false,
+      _connectUserIDList: [],
+      _isGroupCall: false,
+      _groupID: '',
+      _unHandledInviteeList: [],
+      inviteData: null,
+      inviteeList: []
+```
+3. 信令初始化和监听
+```
+    wx.$TIM = TIM.create({SDKAppID: Signature.sdkAppID})
+    wx.$TSignaling = new TSignaling({SDKAppID: Signature.sdkAppID, tim: wx.$TIM})
+    wx.TSignalingClient = new TSignalingClient({ TSignaling: wx.$TSignaling })
+      // 新的邀请回调事件
+      wx.$TSignaling.on(TSignaling.EVENT.NEW_INVITATION_RECEIVED, this.handleNewInvitationReceived, this);
+      // SDK Ready 回调
+      wx.$TSignaling.on(TSignaling.EVENT.SDK_READY, this.handleSDKReady, this);
+      // 被踢下线
+      wx.$TSignaling.on(TSignaling.EVENT.KICKED_OUT, this.handleKickedOut, this);
+```
+4. 邀请事件处理
+```
+ handleNewInvitationReceived(event) {
+    console.log(TAG_NAME, 'onNewInvitationReceived', event);
+    const { data: { inviter, inviteeList, data, inviteID, groupID } } = event
+    const inviteData = JSON.parse(data)
+    wx.$globalData.inviteData = inviteData
+    wx.$globalData.inviteeList = inviteeList
 
-## 前提条件
-1. 您已 [注册腾讯云](https://cloud.tencent.com/document/product/378/17985) 账号，并完成 [实名认证](https://cloud.tencent.com/document/product/378/3629)。
+    // 此处判断inviteeList.length 大于2，用于在非群组下多人通话判断
+    // userIDs 为同步 native 在使用无 groupID 群聊时的判断依据
+    const isGroupCall = groupID || inviteeList.length >= 2 || inviteData.data && inviteData.data.userIDs && inviteData.data.userIDs.length >= 2 ? true : false
+    let callEnd = false
+    // 此处逻辑用于通话结束时发出的invite信令
+    // 群通话已结束时，room_id 不存在或者 call_end 为 0
+    if (isGroupCall && (!inviteData.room_id || (inviteData.call_end && inviteData.call_end === 0))) {
+      callEnd = true
+    }
+    // 1v1通话挂断时，通知对端的通话结束和通话时长
+    if (!isGroupCall && inviteData.call_end >= 0) {
+      callEnd = true
+    }
 
-2. 出于政策和合规的考虑，微信暂未放开所有小程序对实时音视频功能（即 &lt;live-pusher&gt; 和 &lt;live-player&gt; 标签）的支持：
-- 小程序推拉流标签不支持个人小程序，只支持企业类小程序。
-- 小程序推拉流标签使用权限暂时只开放给有限 [类目](https://developers.weixin.qq.com/miniprogram/dev/component/live-pusher.html)。
-- 符合类目要求的小程序，需要在【[微信公众平台](https://mp.weixin.qq.com)】>【开发】>【开发管理】>【接口设置】中自助开通该组件权限，如下图所示：
-![](https://main.qcloudimg.com/raw/dc6d3c9102bd81443cb27b9810c8e981.png)
-## 操作步骤
+    if(callEnd) {
+      return
+    }
+    
+    if(wx.$globalData.callStatus === CALL_STATUS.CALLING || wx.$globalData.callStatus === CALL_STATUS.CONNECTED) {
+      wx.$TSignaling.reject({ inviteID, type: data.call_type, lineBusy: 'line_busy' })
+      return
+    }
+    const callInfo = {
+      _isGroupCall: !!isGroupCall,
+      _groupID: groupID || '',
+      _unHandledInviteeList: [...inviteeList, inviter],
+    }
+    if (isGroupCall && !groupID) {
+      callInfo._unHandledInviteeList = [...inviteData.data.userIDs]
+    }
+    wx.$globalData.callStatus = CALL_STATUS.CALLING
+    wx.$globalData.callType = inviteData.call_type
+    wx.$globalData.inviteID = inviteID
+    wx.$globalData.inviter= inviter
+    wx.$globalData.roomID = inviteData.room_id
+    wx.$globalData.isSponsor = false
+    wx.$globalData._connectUserIDList = [inviter]
+    wx.$globalData._isGroupCall = callInfo._isGroupCall
+    wx.$globalData._groupID = callInfo._groupID
+    wx.$globalData._unHandledInviteeList = callInfo._unHandledInviteeList
+    
+    wx.$globalData.callEvent = event
+    wx.navigateTo({
+      url: '/pages/calling/calling', // 需要跳转的页面
+    })
+    
+  }
+```
+5. 跳转的页面引入 TUICalling 组件
+```
+    <TUICalling
+    id="TUICalling-component"
+    config="{{config}}"
+  ></TUICalling>
+```
+6. 指定页面onLoad方法进行组件初始化和处理
+```
+   const config = {
+      sdkAppID: wx.$globalData.sdkAppID,
+      userID: wx.$globalData.userID,
+      userSig: wx.$globalData.userSig
+      }
+      this.setData({
+      config: { ...this.data.config, ...config },
+      }, () => {
+      this.TUICalling = this.selectComponent('#TUICalling-component')
+      this.TUICalling.init()
+      wx.$globalData.callStatus === CALL_STATUS.CALLING && this.TUICalling.handleNewInvitationReceived(wx.$globalData.callEvent)
+      }) 
+```
+7. TUICalling.js 邀请事件处理
+```
+ // 新的邀请回调事件
+    handleNewInvitationReceived(event) {
+      console.log(`${TAG_NAME}, handleNewInvitationReceived`, event)
+      this.data.config.type = wx.$globalData.callType
+      this.getUserProfile([event.data.inviter || event.data.sponsor])
+      this.setData({
+        config: this.data.config,
+        callStatus: 'calling',
+        isSponsor: false,
+      })
+    }
+```
 
-<span id="step1"></span>
-
-### 步骤1：创建新的应用
-
-1. 登录实时音视频控制台，选择【开发辅助】>【[快速跑通Demo](https://console.cloud.tencent.com/trtc/quickstart)】。
-
-2. 单击【立即开始】，输入应用名称，例如`TestTRTC`，单击【创建应用】。
-
-3. 登入[即时通信IM控制台](https://console.cloud.tencent.com/im)，添加新应用，启用IM服务。
-
-<span id="step2"></span>
-
-### 步骤2：下载 SDK 和 Demo 源码
-
-1. 您可以单击【[Github](https://github.com/tencentyun/TRTCSDK/tree/master/WXMini/TRTCScenesDemo)】跳转至 Github（或单击【[ZIP](https://web.sdk.qcloud.com/component/trtccalling/download/trtc-calling-miniapp.zip)】），下载相关 SDK 及配套的 Demo 源码。
-
-<span id="step3"></span>
-
-### 步骤3：配置 Demo 工程文件
-
-1. 解压 [步骤2](#step2) 中下载的源码包。
-
-2. 找到并打开`./debug/GenerateTestUserSig.js`文件。
-
-3. 设置`GenerateTestUserSig.js`文件中的相关参数：
-
-  <ul><li>SDKAPPID：默认为0，请设置为实际的 SDKAppID。</li>
-
-  <li>SECRETKEY：默认为空字符串，请设置为实际的密钥信息。</li></ul> 
-
-  <img src="https://main.qcloudimg.com/raw/0ae7a197ad22784384f1b6e111eabb22.png">
-
-4. 返回实时音视频控制台，单击【粘贴完成，下一步】。
-
-5. 单击【关闭指引，进入控制台管理应用】。
-
->!本文提到的生成 UserSig 的方案是在客户端代码中配置 SECRETKEY，该方法中 SECRETKEY 很容易被反编译逆向破解，一旦您的密钥泄露，攻击者就可以盗用您的腾讯云流量，因此**该方法仅适合本地跑通 Demo 和功能调试**。
-
->正确的 UserSig 签发方式是将 UserSig 的计算代码集成到您的服务端，并提供面向 App 的接口，在需要 UserSig 时由您的 App 向业务服务器发起请求获取动态 UserSig。更多详情请参见 [服务端生成 UserSig](https://cloud.tencent.com/document/product/647/17275#Server)。
-
-### 步骤4：编译运行
-
-1. 打开微信开发者工具，选择【小程序】，单击新建图标，选择【导入项目】。
-
-2. 填写您微信小程序的 AppID，单击【导入】。
-
- >!此处应输入您微信小程序的 AppID，而非 SDKAppID。
-
- ![](https://main.qcloudimg.com/raw/b4eefa2896672e132f827fea79a2608b.jpg)   
-
-3. 单击【预览】，生成二维码，通过手机微信扫码二维码即可进入小程序。
+8. 作为邀请方挂断处理
+```
+    /**
+     * 当您作为被邀请方收到的回调时，可以调用该函数拒绝来电
+     */
+    async reject() {
+      console.log(`${TAG_NAME}, reject`)
+      const inviteID = wx.$globalData.inviteID
+      const data = wx.$globalData.callEvent.data
+      wx.$TSignaling.reject({
+        inviteID,
+        data: JSON.stringify(data)
+      }).then(res => {
+        this.triggerEvent('sendMessage', {
+          message: res.data.message,
+        })
+      })
+```
 
 
 
-> 小程序 &lt;live-player&gt; 和 &lt;live-pusher&gt; 标签需要在手机微信上才能使用，微信开发者工具上无法使用。为了小程序能够使用腾讯云房间管理服务，您需要在手机微信上开启调试功能：手机微信扫码二维码后，单击右上角【...】>【打开调试】。
-
-<img src="https://web.sdk.qcloud.com/component/trtccalling/doc/miniapp/108fa6e3c2e8da33e547739c3ab93a31.png" style="zoom:30%;" />
-
-## 常见问题
-
-### 1. 查看密钥时只能获取公钥和私钥信息，该如何获取密钥？
-
-TRTC SDK 6.6 版本（2019年08月）开始启用新的签名算法 HMAC-SHA256。在此之前已创建的应用，需要先升级签名算法才能获取新的加密密钥。如不升级，您也可以继续使用 [老版本算法 ECDSA-SHA256](https://cloud.tencent.com/document/product/647/17275#Old)，如已升级，您按需切换为新旧算法。
-
-升级/切换操作：
-
-1. 登录 [实时音视频控制台](https://console.cloud.tencent.com/trtc)。
-
-2. 在左侧导航栏选择【应用管理】，单击目标应用所在行的【应用信息】。
-
-3. 选择【快速上手】页签，单击【第二步 获取签发UserSig的密钥】区域的【点此升级】、【非对称式加密】或【HMAC-SHA256】。
-
-- 升级：
-
-   ![](https://main.qcloudimg.com/raw/69bd0957c99e6a6764368d7f13c6a257.png)
-
-- 切换回老版本算法 ECDSA-SHA256：
-
-   ![](https://main.qcloudimg.com/raw/f89c00f4a98f3493ecc1fe89bea02230.png)
-
-- 切换为新版本算法 HMAC-SHA256：
-
-   ![](https://main.qcloudimg.com/raw/b0412153935704abc9e286868ad8a916.png)
-
-
-### 2. 防火墙有什么限制？
-
-由于 SDK 使用 UDP 协议进行音视频传输，所以对 UDP 有拦截的办公网络下无法使用，如遇到类似问题，请参考文档：[应对公司防火墙限制](https://cloud.tencent.com/document/product/647/34399)。
-
-### 3. 调试时为什么要开启调试模式？
-
-开启调试后，可以略过把“request 合法域名”加入小程序白名单的操作，避免遇到登录失败，通话无法连接的问题。

@@ -1,4 +1,5 @@
 // pages/calling/calling.js
+import { CALL_STATUS } from '../../components/TUICalling/TRTCCalling/common/constants'
 Page({
 
     /**
@@ -29,7 +30,7 @@ Page({
           }, () => {
             this.TUICalling = this.selectComponent('#TUICalling-component')
             this.TUICalling.init()
-            this.TUICalling.handleNewInvitationReceived(wx.$globalData.callEvent)
+            wx.$globalData.callStatus === CALL_STATUS.CALLING && this.TUICalling.handleNewInvitationReceived(wx.$globalData.callEvent)
           })   
     },
 

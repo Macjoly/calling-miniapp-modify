@@ -2,7 +2,7 @@ import { genTestUserSig } from './debug/GenerateTestUserSig'
 import TSignaling from './components/TUICalling/TRTCCalling/node_module/tsignaling-wx'
 import TSignalingClient from './components/TUICalling/TRTCCalling/TSignalingClient'
 import TIM from './components/TUICalling/TRTCCalling/node_module/tim-wx-sdk'
-import { EVENT, CALL_STATUS, MODE_TYPE, CALL_TYPE } from './components/TUICalling/TRTCCalling/common/constants'
+import { CALL_STATUS } from './components/TUICalling/TRTCCalling/common/constants'
 
 const Signature = genTestUserSig('')
 const TAG_NAME = 'app';
@@ -82,7 +82,7 @@ App({
     if (isGroupCall && !groupID) {
       callInfo._unHandledInviteeList = [...inviteData.data.userIDs]
     }
-    
+    wx.$globalData.callStatus = CALL_STATUS.CALLING
     wx.$globalData.callType = inviteData.call_type
     wx.$globalData.inviteID = inviteID
     wx.$globalData.inviter= inviter
@@ -95,7 +95,7 @@ App({
     
     wx.$globalData.callEvent = event
     wx.navigateTo({
-      url: '/pages/calling/calling',
+      url: '/pages/calling/calling', // 需要跳转的页面
     })
     
   },
