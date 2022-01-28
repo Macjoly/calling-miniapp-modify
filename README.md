@@ -3,9 +3,9 @@
 本demo是基于[腾讯云calling小程序](https://github.com/tencentyun/TRTCSDK/tree/master/Web/TRTCScenesDemo/trtc-calling-web)修改了相关逻辑来实现全局监听，在收到邀请信令后跳转到指定页面（该页面注册了TUICalling组件）进行组件初始化，**使用前建议先了解官网demo的相关文档**，这里就不多做说明
 
 ### 全局监听效果展示
-<img src="https://miller-1c285a-1253985742.tcloudbaseapp.com/2022git/0128.gif" style="widht: 45%;">
+<img src="https://miller-1c285a-1253985742.tcloudbaseapp.com/2022git/0128.gif" style="widht: 35%;">
 
-<img src="https://wangyg-4gsdbg0a58f646da-1253985742.tcloudbaseapp.com/images/012802.gif" style="widht: 45%;">
+<img src="https://wangyg-4gsdbg0a58f646da-1253985742.tcloudbaseapp.com/images/012802.gif" style="widht: 35%;">
 
 ### 基于calling组件的修改说明
 全局监听的实现思路就是在原有calling组件的基础上将信令放到了app.js文件，并在appLaunch实现邀请信令的监听，监听到邀请事件后处理邀请事件，并且把需要的参数设置为globalData方便取的时候获取，然后跳转页面初始化组件处理邀请事件，此外由于邀请没有走TRTCDelegate,所以挂断事件也是用信令单独处理的，由于时间比较催促，所以本demo仅提供思路和参考
