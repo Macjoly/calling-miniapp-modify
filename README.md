@@ -1,6 +1,6 @@
 
 ### 说明
-本demo是基于[腾讯云calling小程序](https://github.com/tencentyun/TRTCSDK/tree/master/Web/TRTCScenesDemo/trtc-calling-web)修改了相关逻辑来实现全局监听，在收到邀请信令后跳转到指定页面（该页面注册了TUICalling组件）进行组件初始化，**使用前建议先了解官网demo的相关文档**，这里就不多做说明
+本demo是基于[腾讯云calling小程序](https://github.com/tencentyun/TRTCSDK/tree/master/Web/TRTCScenesDemo/trtc-calling-web)修改了相关逻辑来实现全局监听，在收到邀请信令后跳转到指定页面（该页面注册了TUICalling组件）进行组件初始化，**使用前建议先了解官网demo的相关文档**，这里就不多做说明，如果觉得本项目对你有帮助麻烦点个start ^_^ !
 
 ### 全局监听效果展示
 <img src="https://miller-1c285a-1253985742.tcloudbaseapp.com/2022git/0128.gif" style="widht: 35%;">
