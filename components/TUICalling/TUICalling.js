@@ -12,9 +12,9 @@ Component({
     config: {
       type: Object,
       value: {
-        sdkAppID: 0,
-        userID: '',
-        userSig: '',
+        sdkAppID: wx.$globalData.sdkAppID,
+        userID: wx.$globalData.userID,
+        userSig: wx.$globalData.userSig,
         type: 1,
         tim: null,
       },
@@ -30,7 +30,7 @@ Component({
 
   data: {
     callStatus: 'idle', // idle、calling、connection
-    isSponsor: false,
+    isSponsor: wx.$globalData.isSponsor,
     pusher: {}, // TRTC 本地流
     playerList: [], // TRTC 远端流
     remoteUsers: [], // 远程用户资料
@@ -43,7 +43,7 @@ Component({
     handleNewInvitationReceived(event) {
       console.log(`${TAG_NAME}, handleNewInvitationReceived`, event)
       this.data.config.type = wx.$globalData.callType
-      this.getUserProfile([event.data.sponsor])
+      this.getUserProfile([event.data.inviter || event.data.sponsor])
       this.setData({
         config: this.data.config,
         callStatus: 'calling',
@@ -254,7 +254,10 @@ Component({
      * @param type 0-为之， 1-语音通话，2-视频通话
      */
     async call(params) {
-      wx.$TRTCCalling.call({ userID: params.userID, type: params.type }).then((res) => {
+      wx.$TRTCCalling.call({
+        userID: params.userID,
+        type: params.type
+      }).then((res) => {
         this.data.config.type = params.type
         this.getUserProfile([params.userID])
         this.setData({
@@ -277,7 +280,11 @@ Component({
      * @param groupID IM群组ID
      */
     async groupCall(params) {
-      wx.$TRTCCalling.groupCall({ userIDList: params.userIDList, type: params.type, groupID: params.groupID }).then((res) => {
+      wx.$TRTCCalling.groupCall({
+        userIDList: params.userIDList,
+        type: params.type,
+        groupID: params.groupID
+      }).then((res) => {
         this.data.config.type = params.type
         this.getUserProfile(params.userIDList)
         this.setData({
@@ -308,11 +315,22 @@ Component({
      */
     async reject() {
       console.log(`${TAG_NAME}, reject`)
-      wx.$TRTCCalling.reject().then((res) => {
+      const inviteID = wx.$globalData.inviteID
+      const data = wx.$globalData.callEvent.data
+      wx.$TSignaling.reject({
+        inviteID,
+        data: JSON.stringify(data)
+      }).then(res => {
+        console.log(128, res)
         this.triggerEvent('sendMessage', {
           message: res.data.message,
         })
       })
+      // wx.$TRTCCalling.reject().then((res) => {
+      //   this.triggerEvent('sendMessage', {
+      //     message: res.data.message,
+      //   })
+      // })
       this.reset()
     },
 
@@ -347,7 +365,9 @@ Component({
     },
     // 呼叫中的事件处理
     handleCallingEvent(data) {
-      const { name } = data.detail
+      const {
+        name
+      } = data.detail
       switch (name) {
         case 'accept':
           this.accept()
@@ -362,7 +382,7 @@ Component({
           wx.$TRTCCalling.switchCamera()
           break
         case 'switchAudioCall':
-          wx.$TRTCCalling.switchAudioCall().then((res)=>{
+          wx.$TRTCCalling.switchAudioCall().then((res) => {
             this.data.config.type = wx.$TRTCCalling.CALL_TYPE.AUDIO
             this.setData({
               config: this.data.config,
@@ -379,7 +399,10 @@ Component({
     // 通话中的事件处理
     handleConnectedEvent(data) {
       console.log(`${TAG_NAME}, handleVideoEvent--`, data)
-      const { name, event } = data.detail
+      const {
+        name,
+        event
+      } = data.detail
       switch (name) {
         case 'toggleViewSize':
           this.toggleViewSize(event)
@@ -418,7 +441,7 @@ Component({
           wx.$TRTCCalling.switchCamera(event)
           break
         case 'switchAudioCall':
-          wx.$TRTCCalling.switchAudioCall().then((res)=>{
+          wx.$TRTCCalling.switchAudioCall().then((res) => {
             this.data.config.type = 1
             this.setData({
               config: this.data.config,
@@ -435,7 +458,9 @@ Component({
 
     // 获取用户资料
     async getUserProfile(userList) {
-      const imResponse = await this.getTim().getUserProfile({ userIDList: userList })
+      const imResponse = await this.getTim().getUserProfile({
+        userIDList: userList
+      })
       this.setData({
         remoteUsers: imResponse.data,
       })
@@ -475,8 +500,7 @@ Component({
     created() {
 
     },
-    attached() {
-    },
+    attached() {},
     ready() {
       if (!wx.$TRTCCalling) {
         wx.$TRTCCalling = new TRTCCalling({
@@ -489,16 +513,13 @@ Component({
     detached() {
       this.reset()
     },
-    error() {
-    },
+    error() {},
   },
   pageLifetimes: {
     show() {
 
     },
-    hide() {
-    },
-    resize() {
-    },
+    hide() {},
+    resize() {},
   },
 })
