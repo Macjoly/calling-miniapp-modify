@@ -1,0 +1,8 @@
+<!--pages/calling/calling.wxml-->
+<view class="container">
+    <TUICalling
+    id="TUICalling-component"
+    config="{{config}}"
+  ></TUICalling>
+  <view class="call-page">组件引入页面-进行音视频通话</view>
+</view>
