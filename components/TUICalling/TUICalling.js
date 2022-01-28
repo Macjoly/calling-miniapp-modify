@@ -74,7 +74,6 @@ Component({
     // 用户数据更新
     handleUserUpdate(res) {
       console.log(`${TAG_NAME}, handleUserUpdate, res`)
-      console.log(res)
       this.handleNetStatus(res.data)
       this.setData({
         pusher: res.data.pusher,
@@ -151,7 +150,6 @@ Component({
     // 通话结束
     handleCallingEnd(event) {
       console.log(`${TAG_NAME}, handleCallingEnd`)
-      console.log(event)
       this.reset()
       if (event.data.message) {
         this.triggerEvent('sendMessage', {
@@ -300,7 +298,6 @@ Component({
      */
     async accept() {
       wx.$TRTCCalling.accept().then((res) => {
-        console.log(777, res)
         this.setData({
           pusher: res.pusher,
           callStatus: 'connection',
@@ -321,7 +318,6 @@ Component({
         inviteID,
         data: JSON.stringify(data)
       }).then(res => {
-        console.log(128, res)
         this.triggerEvent('sendMessage', {
           message: res.data.message,
         })
